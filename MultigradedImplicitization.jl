@@ -118,7 +118,7 @@ function components_of_kernel(d, phi)
     grA = grading_group(graded_dom)
     total_deg_dom = grade(domain(phi), [1 for i in 1:ngens(domain(phi))])[1]
     phi = hom(graded_dom, codomain(phi), [phi(x) for x in gens(domain(phi))]) 
-    gens_dict = Dict()
+    gens_dict = Dict{GrpAbFinGenElem, Vector{MPolyDecRingElem}}()
 
     for i in 1:d
         
@@ -126,19 +126,15 @@ function components_of_kernel(d, phi)
         all_degs = unique!([degree(m) for m in all_mons])
 
         if length(collect(values(gens_dict))) == 0
-            prev_gens = []
+            prev_gens = MPolyDecRingElem[]
         else
-            prev_gens = reduce(vcat, collect(values(gens_dict)))
+            prev_gens = reduce(vcat, values(gens_dict))
         end
-
-        println(typeof.([deg, phi, prev_gens]))
-        # we need serialization for 
-        # GrpAbFinGenElem, Oscar.MPolyAnyMap
 
         # this can be parallelized
         for deg in all_degs
-            
-            gens_dict[deg] = component_of_kernel(deg, phi, prev_gens)
+            values = component_of_kernel(deg, phi, prev_gens)
+            gens_dict[deg] = values
         end
     end
 
@@ -160,10 +156,11 @@ f1 = x11*x22 - x12*x21
 f2 = y11*y22 - y12*y21
 G = [f1,  f2];
 grA = grading_group(R)
+
 deg = grA([1,1,1,1,0,0,0,0])
 
 dicts = components_of_kernel(2, phi)
-dict = dicts[deg]
-reduce(vcat, values(dict))
+#dict = dicts[2]
+#reduce(vcat, values(dict))
 
 
