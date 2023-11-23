@@ -82,7 +82,6 @@ function find_basis_in_degree(domain, deg, prev_gens)
         return monomial_basis(domain, deg)
     end
 
-    
     gen_shifts = reduce(vcat, [[g*b for b in monomial_basis(domain, deg - degree(g))] for g in prev_gens])
     mons = unique!(reduce(vcat, [collect(monomials(f)) for f in gen_shifts]))
     coeffs = mons_and_coeffs(mons, gen_shifts)
@@ -113,7 +112,6 @@ end
 
 
 function components_of_kernel(d, phi)
-
     A = max_grading(phi)[:, (ngens(codomain(phi))+1):end]
     #A = vcat(matrix(ZZ, [[1 for i in 1:ncols(A)]]), A)
     graded_dom = grade(domain(phi), A)[1]
@@ -121,8 +119,7 @@ function components_of_kernel(d, phi)
     total_deg_dom = grade(domain(phi), [1 for i in 1:ngens(domain(phi))])[1]
     phi = hom(graded_dom, codomain(phi), [phi(x) for x in gens(domain(phi))]) 
     gens_dict = Dict()
-    
-    
+
     for i in 1:d
         
         all_mons = [graded_dom(m) for m in monomial_basis(total_deg_dom, [i])]
@@ -134,6 +131,11 @@ function components_of_kernel(d, phi)
             prev_gens = reduce(vcat, collect(values(gens_dict)))
         end
 
+        println(typeof.([deg, phi, prev_gens]))
+        # we need serialization for 
+        # GrpAbFinGenElem, Oscar.MPolyAnyMap
+
+        # this can be parallelized
         for deg in all_degs
             
             gens_dict[deg] = component_of_kernel(deg, phi, prev_gens)
@@ -161,7 +163,7 @@ grA = grading_group(R)
 deg = grA([1,1,1,1,0,0,0,0])
 
 dicts = components_of_kernel(2, phi)
-dict = dicts[2]
+dict = dicts[deg]
 reduce(vcat, values(dict))
 
 
