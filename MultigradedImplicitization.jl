@@ -1,7 +1,7 @@
 using Revise, Oscar
 using Distributed
 
-n_cores = 5
+n_cores = 1
 addprocs(n_cores)
 
 @everywhere using Oscar
@@ -86,7 +86,8 @@ end
     mons = unique!(reduce(vcat, [collect(monomials(f)) for f in image_polys]))
     coeffs = mons_and_coeffs(mons, image_polys)
     (r, K) = nullspace(coeffs)
-    println(K, typeof(K))
+    i = rand(Int, 1)
+    save("/tmp/test-$i", mon_basis*K)
     return mon_basis*K
 end
 
@@ -104,7 +105,7 @@ function components_of_kernel(d, phi)
     total_deg_dom = grade(domain(phi), [1 for i in 1:ngens(domain(phi))])[1]
     phi = hom(graded_dom, codomain(phi), [phi(x) for x in gens(domain(phi))])
 
-    gens_dict = Dict{GrpAbFinGenElem, Vector{MPolyDecRingElem}}()
+    gens_dict = Dict{GrpAbFinGenElem, Vector{<:MPolyDecRingElem}}()
 
     for i in 1:d
         all_mons = [graded_dom(m) for m in monomial_basis(total_deg_dom, [i])]
@@ -115,14 +116,12 @@ function components_of_kernel(d, phi)
         else
             prev_gens = reduce(vcat, values(gens_dict))
         end
-        println(i)
-        merge!(gens_dict, Dict(zip(
-            all_degs,
-            pmap(component_of_kernel,
-                 all_degs,
-                 [phi for _ in all_degs] ,
-                 [prev_gens for _ in all_degs]))))
-
+        
+        results = pmap(component_of_kernel,
+                       all_degs,
+                       [phi for _ in all_degs] ,
+                       [prev_gens for _ in all_degs])
+        merge!(gens_dict, Dict(zip(all_degs, results)))
     end
 
     return gens_dict
