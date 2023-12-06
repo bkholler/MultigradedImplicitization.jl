@@ -1,7 +1,7 @@
 using Revise, Oscar
 using Distributed
 
-n_cores = 1
+n_cores = 8
 addprocs(n_cores)
 
 @everywhere using Oscar
@@ -87,7 +87,6 @@ end
     coeffs = mons_and_coeffs(mons, image_polys)
     (r, K) = nullspace(coeffs)
     i = rand(Int, 1)
-    save("/tmp/test-$i", mon_basis*K)
     return mon_basis*K
 end
 
