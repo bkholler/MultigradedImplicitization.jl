@@ -1,5 +1,4 @@
-using Revise, Oscar
-using Distributed
+using Oscar, Distributed
 
 n_cores = 8
 addprocs(n_cores)
@@ -86,7 +85,6 @@ end
     mons = unique!(reduce(vcat, [collect(monomials(f)) for f in image_polys]))
     coeffs = mons_and_coeffs(mons, image_polys)
     (r, K) = nullspace(coeffs)
-    i = rand(Int, 1)
     return mon_basis*K
 end
 
