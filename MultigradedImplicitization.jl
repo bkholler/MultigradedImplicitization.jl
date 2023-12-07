@@ -154,7 +154,24 @@ G = [f1,  f2];
 deg = grA([1,1,1,1,0,0,0,0])
 
 dicts = components_of_kernel(2, phi)
+
+
+# shut down the extra processes, you might want to do this if you
+# plan on rerunning the file after an error, since the top line
+# adds extra processes.
+map(rmprocs, workers())
+
+# create ideal and save it
+generators = reduce(vcat, filter(x -> !isempty(x), collect(values(dicts))))
+I = ideal(generators)
+
+# see https://arxiv.org/abs/2309.00465 for more details on file format
+# you can replace "kernel.json" with any path you want.
+save("kernel.json", I)
+
+# testing reloading of kernel
+reloaded_kernel = load("kernel.json")
+
 #dict = dicts[2]
 #reduce(vcat, values(dict))
 
-map(rmprocs, workers())
