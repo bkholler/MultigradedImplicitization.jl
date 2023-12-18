@@ -1,11 +1,11 @@
+
 using Oscar, Distributed
 
 n_cores = 8
 addprocs(n_cores)
 
 @everywhere using Oscar
-# changing the type Any to be more specifice will result in speedup
-(_, _, params_channels) = set_channels(Any, Any, Any)
+channels = Oscar.params_channels(Any)
 
 # Some generic helper functions which I could not find in Julia or OSCAR
 # Determine the pivots by computing the RREF and then looking for the first nonzero entry of each row
@@ -89,15 +89,15 @@ end
 end
 
 function components_of_kernel(d, phi)
-    put_params(params_channels, phi)
+    Oscar.put_params(channels, phi)
     
     A = max_grading(phi)[:, (ngens(codomain(phi))+1):end]
     #A = vcat(matrix(ZZ, [[1 for i in 1:ncols(A)]]), A)
     graded_dom = grade(domain(phi), A)[1]
     grA = grading_group(graded_dom)
     
-    put_params(params_channels, grA)
-    put_params(params_channels, graded_dom)
+    Oscar.put_params(channels, grA)
+    Oscar.put_params(channels, graded_dom)
         
     total_deg_dom = grade(domain(phi), [1 for i in 1:ngens(domain(phi))])[1]
     phi = hom(graded_dom, codomain(phi), [phi(x) for x in gens(domain(phi))])
@@ -127,13 +127,13 @@ end
 
 # Example: A product of segree products
 R, (x11, x12, x21, x22, y11, y12, y21, y22) = QQ["x11", "x12", "x21", "x22", "y11", "y12", "y21", "y22"]
-put_params(params_channels, R)
+Oscar.put_params(channels, R)
 
 S, (s1, s2, t1, t2, m1, m2, n1, n2) = QQ["s1", "s2", "t1", "t2", "m1", "m2", "n1", "n2"]
-put_params(params_channels, S)
+Oscar.put_params(channels, S)
 
 phi = hom(R, S, [s1*t1, s1*t2, s2*t1, s2*t2, m1*n1, m1*n2, m2*n1, m2*n2])
-put_params(params_channels, phi)
+Oscar.put_params(channels, phi)
 
 A = max_grading(phi)[:, 9:end]
 
@@ -141,8 +141,8 @@ B = vcat(matrix(QQ, [[1 for i in 1:ncols(A)]]), A)
 R, (x11, x12, x21, x22, y11, y12, y21, y22) = grade(R, A)
 grA = grading_group(R)
 
-put_params(params_channels, grA)
-put_params(params_channels, R)
+Oscar.put_params(channels, grA)
+Oscar.put_params(channels, R)
 
 phi = hom(R, S, [s1*t1, s1*t2, s2*t1, s2*t2, m1*n1, m1*n2, m2*n1, m2*n2])
 f1 = x11*x22 - x12*x21
@@ -157,6 +157,8 @@ dicts = components_of_kernel(2, phi)
 # shut down the extra processes, you might want to do this if you
 # plan on rerunning the file after an error, since the top line
 # adds extra processes.
+
+
 map(rmprocs, workers())
 
 # create ideal and save it
