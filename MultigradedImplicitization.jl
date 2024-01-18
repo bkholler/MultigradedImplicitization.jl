@@ -16,7 +16,6 @@ function jacobian(phi, use_finite_field)
 
         S, a = polynomial_ring(KK, [string(x) for x in gens(codomain(phi))])
 
-
         return matrix([[evaluate(derivative(S(phi(x)), t), vals) for x in gens(domain(phi))] for t in gens(S)])
     else
         return matrix([[derivative(phi(x), t) for x in gens(domain(phi))] for t in gens(codomain(phi))])
@@ -134,7 +133,10 @@ function components_of_kernel(d, phi)
 
     gens_dict = Dict{GrpAbFinGenElem, Vector{<:MPolyDecRingElem}}()
 
+    
     jac = jacobian(phi, true)
+    Oscar.put_params(channels, base_ring(parent(jac)))
+    Oscar.put_params(channels, parent(jac))
     Oscar.put_params(channels, jac)
 
     for i in 1:d
