@@ -1,4 +1,3 @@
-
 using Oscar, Distributed
 
 n_cores = 8
@@ -6,6 +5,23 @@ addprocs(n_cores)
 
 @everywhere using Oscar
 channels = Oscar.params_channels(Any)
+
+
+function jacobian(phi, use_finite_field)
+
+    if use_finite_field
+
+        KK = GF(10000019)
+        vals = [rand(KK) for i in 1:ngens(codomain(phi))]
+
+        S, a = polynomial_ring(KK, [string(x) for x in gens(codomain(phi))])
+
+
+        return matrix([[evaluate(derivative(S(phi(x)), t), vals) for x in gens(domain(phi))] for t in gens(S)])
+    else
+        return matrix([[derivative(phi(x), t) for x in gens(domain(phi))] for t in gens(codomain(phi))])
+    end
+end
 
 # Some generic helper functions which I could not find in Julia or OSCAR
 # Determine the pivots by computing the RREF and then looking for the first nonzero entry of each row
@@ -24,6 +40,13 @@ function pivots(M)
     end
 
     return pivots
+end
+
+@everywhere function supp(f)
+
+    v = sum([exponent_vector(f, i) for i in 1:length(f)])
+
+    return [i for i in 1:length(v) if v[i] != 0]
 end
 
 # given a vector of monomials mons and a row vector M of polynomials finds a matrix coeffs such that mons*coeffs = M
@@ -78,9 +101,16 @@ end
     return [m for m in monomial_basis(domain, deg) if !(m in bad_monomials)]
 end
 
-@everywhere function component_of_kernel(deg, phi, prev_gens)
+@everywhere function component_of_kernel(deg, phi, prev_gens, jac)
 
     mon_basis = find_basis_in_degree(domain(phi), deg, prev_gens)
+    C = unique!(reduce(vcat, [supp(m) for m in mon_basis]))
+
+    if rank(jac[:, C]) == length(C)
+
+        return MPolyDecRingElem[]
+    end
+
     image_polys = [phi(m) for m in mon_basis]
     mons = unique!(reduce(vcat, [collect(monomials(f)) for f in image_polys]))
     coeffs = mons_and_coeffs(mons, image_polys)
@@ -104,6 +134,9 @@ function components_of_kernel(d, phi)
 
     gens_dict = Dict{GrpAbFinGenElem, Vector{<:MPolyDecRingElem}}()
 
+    jac = jacobian(phi, true)
+    Oscar.put_params(channels, jac)
+
     for i in 1:d
         all_mons = [graded_dom(m) for m in monomial_basis(total_deg_dom, [i])]
         all_degs = unique!([degree(m) for m in all_mons])
@@ -117,7 +150,8 @@ function components_of_kernel(d, phi)
         results = pmap(component_of_kernel,
                        all_degs,
                        [phi for _ in all_degs] ,
-                       [prev_gens for _ in all_degs])
+                       [prev_gens for _ in all_degs], 
+                       [jac for _ in all_degs])
         merge!(gens_dict, Dict(zip(all_degs, results)))
     end
 
